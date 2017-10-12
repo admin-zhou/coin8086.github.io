@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Lua快速入门</title>
+  <meta name="description" content="本文针对希望了解Lua或者迅速抓住Lua的关键概念和编程模式的有经验的程序员，因此不打算教给读者诸如条件语句的语法或者函数定义的方式等等显而易见的东西，以及一些诸如变量、函数等现代编程语言普遍的基本概念。本文只打算告诉读者Lua那些与众不同的特性以及它们实际上带来了怎样颠覆以往的、独特的编程思维方式。">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="/2011/05/01/lua-quick-start.html">
+  <link rel="alternate" type="application/rss+xml" title="晦鸣" href="/feed.xml">
+
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-85747376-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+
+  <body>
+
+    <header class="site-header" role="banner">
+
+  <div class="wrapper">
+    <a class="site-title" href="/">晦鸣</a>
+
+    <nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+            <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+            <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+        <a class="page-link" href="/about.html">典故</a>
+        <a class="page-link" href="/works.html">拙著</a>
+        <a class="page-link" href="/tags.html">标签</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Lua快速入门</h1>
+
+    <p>
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/lua.html">lua</a></span>
+  </span>
+
+
+</p>
+
+    <p class="post-meta">
+      <time datetime="2011-05-01T00:00:00+00:00" itemprop="datePublished">2011-05-01</time>
+    </p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <ul id="markdown-toc">
+  <li><a href="#前言" id="markdown-toc-前言">前言</a></li>
+  <li><a href="#初阶话题" id="markdown-toc-初阶话题">初阶话题</a>    <ul>
+      <li><a href="#数据类型" id="markdown-toc-数据类型">数据类型</a></li>
+      <li><a href="#函数" id="markdown-toc-函数">函数</a></li>
+      <li><a href="#表" id="markdown-toc-表">表</a></li>
+      <li><a href="#简单对象的实现" id="markdown-toc-简单对象的实现">简单对象的实现*</a></li>
+    </ul>
+  </li>
+  <li><a href="#进阶话题" id="markdown-toc-进阶话题">进阶话题</a>    <ul>
+      <li><a href="#函数闭包closure" id="markdown-toc-函数闭包closure">函数闭包（closure）</a></li>
+      <li><a href="#隐藏对象的私有成员" id="markdown-toc-隐藏对象的私有成员">隐藏对象的私有成员*</a></li>
+      <li><a href="#元表metatable" id="markdown-toc-元表metatable">元表（metatable）</a></li>
+      <li><a href="#基于原型的继承" id="markdown-toc-基于原型的继承">基于原型的继承*</a></li>
+      <li><a href="#函数环境function-environment" id="markdown-toc-函数环境function-environment">函数环境（function environment）</a></li>
+      <li><a href="#模块module" id="markdown-toc-模块module">模块（module）</a></li>
+    </ul>
+  </li>
+  <li><a href="#高阶话题" id="markdown-toc-高阶话题">高阶话题</a>    <ul>
+      <li><a href="#迭代iteration" id="markdown-toc-迭代iteration">迭代（iteration）</a></li>
+      <li><a href="#协作线程coroutine" id="markdown-toc-协作线程coroutine">协作线程（coroutine）</a></li>
+    </ul>
+  </li>
+  <li><a href="#附录-常用的lua参考资料" id="markdown-toc-附录-常用的lua参考资料">附录 常用的Lua参考资料</a></li>
+</ul>
+
+<h2 id="前言">前言</h2>
+<p>本文针对希望了解Lua或者迅速抓住Lua的关键概念和编程模式的有经验的程序员，因此不打算教给读者诸如条件语句的语法或者函数定义的方式等等显而易见的东西，以及一些诸如变量、函数等现代编程语言普遍的基本概念。本文只打算告诉读者Lua那些与众不同的特性以及它们实际上带来了怎样颠覆以往的、独特的编程思维方式。</p>
+
+<p>本文共分初、中、高阶三大部分，每部分又有若干章节。读者应当从头至尾循序渐进阅读，但标有“*”号的章节（主要讨论OO在Lua中的实现方式）可以略去而不影响对其他内容的理解。读者只要把前两部分完成就可以胜任Lua开发的绝大部分任务。高阶部分可作为选择。</p>
+
+<p>本文不能取代Lua参考手册或者一本全面的Lua教科书，对一些重要的Lua函数也未做足够的说明。在阅读的同时或者之后，读者应当多多参考Lua的正式文档或者其他相关材料（附录里列出了一些常用的Lua参考资料）。</p>
+
+<p>本文介绍的Lua版本是5.1。</p>
+
+<h2 id="初阶话题">初阶话题</h2>
+
+<h3 id="数据类型">数据类型</h3>
+<ul>
+  <li>数值（number）- 内部以double表示的数值<sup id="fnref:1"><a href="#fn:1" class="footnote">1</a></sup></li>
+  <li>字符串（string）- 由任意字符（包括零）组成的、以零结尾的字符序列</li>
+  <li>布尔（boolean）- 只有“true”或者“false”两个值的逻辑类型</li>
+  <li>函数（function）- 基本的Lua对象，不同于C语言的函数或函数指针，Lua的关键概念之一</li>
+  <li>表（table）- “异构”的Hash表，Lua的另一关键概念</li>
+  <li>userdata - C语言用户定义的数据结构，用于扩展Lua语言，本文不会涉及</li>
+  <li>线程（thread）- 协作线程（coroutine），不同于一般操作系统的抢占式线程</li>
+  <li>nil - 代表“空”，类似于C语言的NULL，但实际含义要深刻得多</li>
+</ul>
+
+<h3 id="函数">函数</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">foo</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+  <span class="k">return</span> <span class="n">sum</span><span class="p">,</span> <span class="n">c</span>  <span class="c1">--函数可以返回多个值</span>
+<span class="k">end</span>
+
+<span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="n">foo</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s1">'123'</span><span class="p">,</span> <span class="s1">'hello'</span><span class="p">)</span>  <span class="c1">--平行赋值</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>124 hello
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>函数定义 - 用关键字<code class="highlighter-rouge">function</code>定义函数，以关键字<code class="highlighter-rouge">end</code>结束</li>
+  <li>函数可以返回多个值 - <code class="highlighter-rouge">return a, b, c, ...</code></li>
+  <li>平行赋值 - <code class="highlighter-rouge">a, b = c, d</code></li>
+  <li>局部变量 - 用关键字<code class="highlighter-rouge">local</code>定义，否则即使在函数内部定义的变量也是全局变量！</li>
+  <li>全局变量 - 没有用<code class="highlighter-rouge">local</code>定义的变量都是全局变量。前面的代码定义了三个全局变量：<code class="highlighter-rouge">foo</code>、<code class="highlighter-rouge">r1</code>和<code class="highlighter-rouge">r2</code></li>
+</ul>
+
+<h3 id="表">表</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="c1">--定义一张空表</span>
+<span class="n">a</span> <span class="o">=</span> <span class="p">{</span> <span class="p">}</span>
+<span class="c1">--定义一张有初始内容的表</span>
+<span class="n">b</span> <span class="o">=</span> <span class="p">{</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>  <span class="n">str</span> <span class="o">=</span> <span class="s1">'abc'</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="s1">'hello'</span> <span class="p">}</span>
+
+<span class="c1">--访问表的成员</span>
+<span class="n">a</span><span class="p">.</span><span class="n">n</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">a</span><span class="p">.</span><span class="n">str</span> <span class="o">=</span> <span class="s1">'abc'</span>
+<span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'hello'</span>
+<span class="n">a</span><span class="p">[</span><span class="s2">"a table"</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span>
+
+<span class="c1">--任何类型的值都可以做表项的key</span>
+<span class="c1">--(除了nil)</span>
+<span class="k">function</span> <span class="nf">func1</span><span class="p">()</span> <span class="k">end</span>
+<span class="k">function</span> <span class="nf">func2</span><span class="p">()</span> <span class="k">end</span>
+<span class="n">a</span><span class="p">[</span><span class="n">func1</span><span class="p">]</span> <span class="o">=</span> <span class="n">func2</span>
+
+<span class="c1">--穷举表a</span>
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="k">in</span> <span class="nb">pairs</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">do</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="s2">"=&gt;"</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>1       =&gt;      100
+2       =&gt;      hello
+str     =&gt;      abc
+function: 0027C988      =&gt;      function: 0027C9A8
+a table =&gt;      table: 0027B138
+n       =&gt;      1
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>表</p>
+
+    <p>Lua的表既是哈希表也是数组。实际上，可以把数组看作键为数值的哈希表。</p>
+  </li>
+  <li>
+    <p>访问表的成员</p>
+
+    <p>通过<code class="highlighter-rouge">.</code>或者<code class="highlighter-rouge">[]</code>运算符来访问表的成员。注意：表达式<code class="highlighter-rouge">a.b</code>等价于<code class="highlighter-rouge">a["b"]</code>，但不等价于<code class="highlighter-rouge">a[b]</code>。</p>
+  </li>
+  <li>
+    <p>表项的键和值</p>
+
+    <p>任何值除了<code class="highlighter-rouge">nil</code>，都可以做为表项的key或value。</p>
+
+    <p>给一个表项的value赋<code class="highlighter-rouge">nil</code>意味着从表中删除这一项：比如<code class="highlighter-rouge">a.b = nil</code>，会把表<code class="highlighter-rouge">a</code>中键为<code class="highlighter-rouge">"b"</code>的项删除。</p>
+
+    <p>访问一个不存在的表项，会得到<code class="highlighter-rouge">nil</code>：比如<code class="highlighter-rouge">c = a.b</code>，若表<code class="highlighter-rouge">a</code>中没有键为<code class="highlighter-rouge">"b"</code>的项，则<code class="highlighter-rouge">c</code>得到<code class="highlighter-rouge">nil</code>。</p>
+  </li>
+</ul>
+
+<h3 id="简单对象的实现">简单对象的实现*</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">createFoo</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">obj</span> <span class="o">=</span> <span class="p">{</span> <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="p">}</span>
+  <span class="k">function</span> <span class="nf">obj</span><span class="p">:</span><span class="n">SetName</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">self</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+  <span class="k">end</span>
+  <span class="k">function</span> <span class="nf">obj</span><span class="p">:</span><span class="n">GetName</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">name</span>
+  <span class="k">end</span>
+  <span class="k">return</span> <span class="n">obj</span>
+<span class="k">end</span>
+
+<span class="n">o</span> <span class="o">=</span> <span class="n">createFoo</span><span class="p">(</span><span class="s2">"Sam"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"name:"</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+
+<span class="n">o</span><span class="p">:</span><span class="n">SetName</span><span class="p">(</span><span class="s2">"Lucy"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"name:"</span><span class="p">,</span> <span class="n">o</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>name: Sam
+name: Lucy
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>对象工厂模式</p>
+
+    <p>如前面代码的<code class="highlighter-rouge">create</code>函数</p>
+  </li>
+  <li>
+    <p>对象的表示方法</p>
+
+    <p>用表来表示对象，把对象的数据和方法都放在一张表内，虽然没有隐藏私有成员，但在实践中完全可行。</p>
+  </li>
+  <li>
+    <p>成员方法的定义</p>
+
+    <p><code class="highlighter-rouge">function obj:method(a1, a2, ...) … end</code> 等价于</p>
+
+    <p><code class="highlighter-rouge">function obj.method(self, a1, a2, ...) … end</code> 等价于</p>
+
+    <p><code class="highlighter-rouge">obj.method = function (self, a1, a2, ...) … end</code></p>
+  </li>
+  <li>
+    <p>成员方法的调用</p>
+
+    <p><code class="highlighter-rouge">obj:method(a1, a2, …)</code> 等价于 <code class="highlighter-rouge">obj.method(obj, a1, a2, ...)</code></p>
+  </li>
+</ul>
+
+<h2 id="进阶话题">进阶话题</h2>
+
+<h3 id="函数闭包closure">函数闭包（closure）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">createCountdownTimer</span><span class="p">(</span><span class="n">second</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">ms</span> <span class="o">=</span> <span class="n">second</span> <span class="o">*</span> <span class="mi">1000</span>
+  <span class="kd">local</span> <span class="k">function</span> <span class="nf">countDown</span><span class="p">()</span>
+    <span class="n">ms</span> <span class="o">=</span> <span class="n">ms</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">ms</span>
+  <span class="k">end</span>
+  <span class="k">return</span> <span class="n">countDown</span>
+<span class="k">end</span>
+
+<span class="n">timer1</span> <span class="o">=</span> <span class="n">createCountdownTimer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span> <span class="k">do</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">timer1</span><span class="p">())</span>
+<span class="k">end</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"------------"</span><span class="p">)</span>
+<span class="n">timer2</span> <span class="o">=</span> <span class="n">createCountdownTimer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span> <span class="k">do</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">timer2</span><span class="p">())</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>999
+998
+997
+------------
+999
+998
+997
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>Upvalue</p>
+
+    <p>一个函数所使用的定义在它的函数体之外的局部变量（external local variable）称为这个函数的upvalue。</p>
+
+    <p>在前面的代码中，函数<code class="highlighter-rouge">countDown</code>使用的定义在函数<code class="highlighter-rouge">createCountdownTimer</code>中的局部变量<code class="highlighter-rouge">ms</code>就是<code class="highlighter-rouge">countDown</code>的upvalue，但<code class="highlighter-rouge">ms</code>对<code class="highlighter-rouge">createCountdownTimer</code>而言只是一个局部变量，不是upvalue。</p>
+  </li>
+  <li>
+    <p>函数闭包</p>
+
+    <p>一个函数和它的所有upvalue构成了一个函数闭包。函数闭包是Lua这一类“函数式”语言的核心概念，建议读者结合示例和相应文档仔细体会。</p>
+  </li>
+  <li>
+    <p>Lua函数闭包与C函数的比较</p>
+
+    <p>Lua函数闭包使函数在多次调用间具有保持自身状态的能力，从此角度看，与带静态局部变量的C函数相似。但二者其实截然不同：前者是一个运行时对象，后者只是一个静态地址；前者可以有“同一类型”的若干实例，每个实例都有自己的状态（如前面的例子），而后者只是一个静态地址，谈不上实例化。</p>
+  </li>
+</ul>
+
+<h3 id="隐藏对象的私有成员">隐藏对象的私有成员*</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">createFoo</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">data</span> <span class="o">=</span> <span class="p">{</span> <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="p">}</span>
+  <span class="kd">local</span> <span class="n">obj</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="k">function</span> <span class="nc">obj</span><span class="p">.</span><span class="nf">SetName</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+  <span class="k">end</span>
+  <span class="k">function</span> <span class="nc">obj</span><span class="p">.</span><span class="nf">GetName</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">data</span><span class="p">.</span><span class="n">name</span>
+  <span class="k">end</span>
+  <span class="k">return</span> <span class="n">obj</span>
+<span class="k">end</span>
+
+<span class="n">o</span> <span class="o">=</span> <span class="n">createFoo</span><span class="p">(</span><span class="s2">"Sam"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"name:"</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">GetName</span><span class="p">())</span>
+
+<span class="n">o</span><span class="p">.</span><span class="n">SetName</span><span class="p">(</span><span class="s2">"Lucy"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"name:"</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">GetName</span><span class="p">())</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>name: Sam
+name: Lucy
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>实现要点 - 把需要隐藏的成员放在一张表里，把该表作为公有成员函数的upvalue；再把所有的共有成员放在另一张表里，把这张表作为对象。</li>
+  <li>局限性 - 考虑到对象继承的情况，这种方法的适用性有所限制。但另一方面，是否需要对象继承要视情况而定。</li>
+</ul>
+
+<h3 id="元表metatable">元表（metatable）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="n">t</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="p">{</span> <span class="n">a</span> <span class="o">=</span> <span class="s2">" and "</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="s2">"Li Lei"</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="s2">"Han Meimei"</span> <span class="p">}</span>
+<span class="n">m</span> <span class="o">=</span> <span class="p">{</span> <span class="n">__index</span> <span class="o">=</span> <span class="n">t2</span><span class="p">}</span>
+<span class="nb">setmetatable</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>  <span class="c1">--设表m为表t的元表</span>
+
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="k">in</span> <span class="nb">pairs</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">do</span>  <span class="c1">--穷举表t</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+<span class="k">end</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"-------------"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">b</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">c</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>-------------
+Li Lei and Han Meimei
+</code></pre>
+</div>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">add</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">)</span>
+  <span class="c1">--‘#’运算符取表长度</span>
+  <span class="kd">local</span> <span class="n">length</span> <span class="o">=</span> <span class="o">#</span><span class="n">t1</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">length</span> <span class="k">do</span>
+    <span class="n">t1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">t1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">t2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+  <span class="k">end</span>
+  <span class="k">return</span> <span class="n">t1</span>
+<span class="k">end</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">}</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span> <span class="p">}</span>
+<span class="nb">setmetatable</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="p">{</span> <span class="n">__add</span> <span class="o">=</span> <span class="n">add</span> <span class="p">})</span>
+<span class="nb">setmetatable</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="p">{</span> <span class="n">__add</span> <span class="o">=</span> <span class="n">add</span> <span class="p">})</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="n">t1</span> <span class="o">+</span> <span class="n">t2</span>
+
+<span class="c1">--穷举表t1</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="o">#</span><span class="n">t1</span> <span class="k">do</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">t1</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>11
+22
+33
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>元表</p>
+
+    <p>元表本身只是一张普通的表，一般带有一些特殊的事件回调函数，通过<code class="highlighter-rouge">setmetatable</code>被设置到某个对象上进而影响这个对象的行为。</p>
+
+    <p>回调事件（如<code class="highlighter-rouge">__index</code>和<code class="highlighter-rouge">__add</code>）由Lua定义，而事件回调函数由脚本用户定义并在相应事件发生时被Lua解释器调用。以前面的代码为例，表的加法运算在缺省状态下将产生异常，但是设置了适当元表的表就可以进行加法运算了——Lua解释器将在表做加法运算时调用用户定义的<code class="highlighter-rouge">__add</code>回调函数。</p>
+  </li>
+  <li>
+    <p>重载运算符</p>
+
+    <p>从前面的例子里读者可能已经意识到在Lua里运算符可以被重载。确实是这样，不仅是<code class="highlighter-rouge">+</code>运算，几乎所有的对象的运算符都可以被重载。</p>
+  </li>
+  <li>
+    <p>更多内容</p>
+
+    <p>元表Lua的内容十分丰富，建议读者参考Lua手册获得更多了解。</p>
+  </li>
+</ul>
+
+<h3 id="基于原型的继承">基于原型的继承*</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="n">Robot</span> <span class="o">=</span> <span class="p">{</span> <span class="n">name</span> <span class="o">=</span> <span class="s2">"Sam"</span><span class="p">,</span> <span class="n">id</span> <span class="o">=</span> <span class="mi">001</span> <span class="p">}</span>
+
+<span class="k">function</span> <span class="nf">Robot</span><span class="p">:</span><span class="n">New</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">t</span> <span class="o">=</span> <span class="nb">setmetatable</span><span class="p">(</span><span class="n">extension</span> <span class="ow">or</span> <span class="p">{</span> <span class="p">},</span> <span class="n">self</span><span class="p">)</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">__index</span> <span class="o">=</span> <span class="n">self</span>
+  <span class="k">return</span> <span class="n">t</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="nf">Robot</span><span class="p">:</span><span class="n">SetName</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="nf">Robot</span><span class="p">:</span><span class="n">GetName</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">name</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="nf">Robot</span><span class="p">:</span><span class="n">SetId</span><span class="p">(</span><span class="n">id</span><span class="p">)</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">id</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="nf">Robot</span><span class="p">:</span><span class="n">GetId</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">id</span>
+<span class="k">end</span>
+<span class="n">robot</span> <span class="o">=</span> <span class="n">Robot</span><span class="p">:</span><span class="n">New</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"robot's name:"</span><span class="p">,</span> <span class="n">robot</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"robot's id:"</span><span class="p">,</span> <span class="n">robot</span><span class="p">:</span><span class="n">GetId</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"-----------------"</span><span class="p">)</span>
+
+<span class="n">FootballRobot</span> <span class="o">=</span> <span class="n">Robot</span><span class="p">:</span><span class="n">New</span><span class="p">(</span>
+  <span class="p">{</span><span class="n">position</span> <span class="o">=</span> <span class="s2">"right back"</span><span class="p">})</span>
+
+<span class="k">function</span> <span class="nf">FootballRobot</span><span class="p">:</span><span class="n">SetPosition</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+  <span class="n">self</span><span class="p">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">p</span>
+<span class="k">end</span>
+<span class="k">function</span> <span class="nf">FootballRobot</span><span class="p">:</span><span class="n">GetPosition</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">self</span><span class="p">.</span><span class="n">position</span>
+<span class="k">end</span>
+<span class="n">fr</span> <span class="o">=</span> <span class="n">FootballRobot</span><span class="p">:</span><span class="n">New</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"fr's position:"</span><span class="p">,</span> <span class="n">fr</span><span class="p">:</span><span class="n">GetPosition</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"fr's name:"</span><span class="p">,</span> <span class="n">fr</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"fr's id:"</span><span class="p">,</span> <span class="n">fr</span><span class="p">:</span><span class="n">GetId</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"-----------------"</span><span class="p">)</span>
+
+<span class="n">fr</span><span class="p">:</span><span class="n">SetName</span><span class="p">(</span><span class="s2">"Bob"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"fr's name:"</span><span class="p">,</span> <span class="n">fr</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"robot's name:"</span><span class="p">,</span> <span class="n">robot</span><span class="p">:</span><span class="n">GetName</span><span class="p">())</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>robot's name: Sam
+robot's id: 1
+-----------------
+fr's position: right back
+fr's name: Sam
+fr's id: 1
+-----------------
+fr's name: Bob
+robot's name: Sam
+</code></pre>
+</div>
+
+<p>’
+要点：</p>
+
+<p>prototype模式</p>
+<ul>
+  <li>一个对象既是一个普通的对象，同时也可以作为创建其他对象的原型的对象（即类对象，class object），动态的改变原型对象的属性就可以动态的影响所有基于此原型的对象；</li>
+  <li>基于一个原型被创建出来的对象可以重载任何属于这个原型对象的方法、属性而不影响原型对象；同时，基于原型被创建出来的对象还可以作为原型来创建其他对象。</li>
+</ul>
+
+<h3 id="函数环境function-environment">函数环境（function environment）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">foo</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">g</span> <span class="ow">or</span> <span class="s2">"'g' is not defined!"</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="n">foo</span><span class="p">()</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="p">{</span> <span class="n">g</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="nb">print</span> <span class="o">=</span> <span class="nb">print</span> <span class="p">}</span>
+<span class="n">setfenv</span><span class="p">(</span><span class="n">foo</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>  <span class="c1">--设置foo的环境为表env</span>
+
+<span class="n">foo</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">g</span> <span class="ow">or</span> <span class="s2">"'g' is not defined!"</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>'g' is not defined!
+100
+'g' is not defined!
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>函数环境</p>
+
+    <p>函数环境就是一个函数在运行时所能访问的“全局”变量的集合，装在一个表中。在缺省状态下，一个函数与定义它的函数共享同一个环境；但是每个函数都可以有自己独立的环境，通过<code class="highlighter-rouge">setfenv</code>来设定。</p>
+
+    <p>在前面的代码中，函数<code class="highlighter-rouge">foo</code>的缺省环境里没有定义变量<code class="highlighter-rouge">g</code>，因此第一次执行<code class="highlighter-rouge">foo</code>， <code class="highlighter-rouge">g</code>为<code class="highlighter-rouge">nil</code>。随后，<code class="highlighter-rouge">foo</code>被指定了一个环境<code class="highlighter-rouge"><span class="p">{</span><span class="w"> </span><span class="err">g</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">100,</span><span class="w"> </span><span class="err">print</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">print</span><span class="w"> </span><span class="p">}</span></code>。这个环境定义了（全局）变量<code class="highlighter-rouge">g</code>，以及打印函数<code class="highlighter-rouge">print</code>，因此第二次执行<code class="highlighter-rouge">foo</code>，<code class="highlighter-rouge">g</code>的值就是<code class="highlighter-rouge">100</code>。但是在定义函数<code class="highlighter-rouge">foo</code>的函数的环境下，<code class="highlighter-rouge">g</code>仍然是一个未定义的变量。</p>
+
+    <p>函数环境是一个比较复杂的概念，建议读者结合示例与文档仔细体会。</p>
+  </li>
+  <li>
+    <p>应用</p>
+
+    <p>利用它可以实现“安全沙箱”执行不受信任的代码；另外Lua的模块（module）的实现也依赖它。</p>
+  </li>
+</ul>
+
+<h3 id="模块module">模块（module）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="c1">--hello.lua:</span>
+<span class="c1">--定义名为hello的模块</span>
+<span class="c1">--并使全局变量在此模块中可见</span>
+<span class="n">module</span><span class="p">(</span><span class="err">‘</span><span class="n">hello</span><span class="err">’</span><span class="p">,</span> <span class="n">package</span><span class="p">.</span><span class="n">seeall</span><span class="p">)</span>
+
+<span class="n">ver</span> <span class="o">=</span> <span class="s2">"version 0.1"</span>
+
+<span class="k">function</span> <span class="nf">hello</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="c1">--test_hello.lua:</span>
+<span class="c1">--使用模块</span>
+<span class="nb">require</span> <span class="s2">"hello"</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">hello</span><span class="p">.</span><span class="n">ver</span><span class="p">)</span>
+<span class="n">hello</span><span class="p">.</span><span class="n">hello</span><span class="p">()</span>
+</code></pre>
+</div>
+
+<p>执行test_hello.lua的输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>version 0.1
+Hello!
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>模块</p>
+
+    <p>模块是一种代码的组织方式。</p>
+  </li>
+  <li>
+    <p>定义模块</p>
+
+    <p>一般在一个Lua文件内以<code class="highlighter-rouge">module</code>调用开始定义一个模块。<code class="highlighter-rouge">module</code>调用同时为这个Lua文件定义了一个新的函数环境（初始为空表）。这里要注意：Lua解释器把一个Lua文件的内容当作一个匿名函数体来处理。设定了新的函数环境后，该文件内所定义的所有全局变量都保存在这个环境（表）里。</p>
+
+    <p><code class="highlighter-rouge">package.seeall</code>的意思是使全局变量在此模块中“可见”（如果没有<code class="highlighter-rouge">package.seeall</code>，在模块里就不可访问<code class="highlighter-rouge">print</code>函数，因为新的环境里没有定义它）。</p>
+  </li>
+  <li>
+    <p>使用方式</p>
+
+    <p>一般用<code class="highlighter-rouge">require</code>函数来导入一个模块，要导入的模块必须被置于包路径（package path）上。包路径可以通过<code class="highlighter-rouge">package.path</code>或者环境变量来设定。一般来说，当前工作路径总是在包路径中。</p>
+  </li>
+  <li>
+    <p>更多</p>
+
+    <p>请参考Lua手册进一步了解更多有关模块的说明。</p>
+  </li>
+</ul>
+
+<h2 id="高阶话题">高阶话题</h2>
+
+<h3 id="迭代iteration">迭代（iteration）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">enum</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">index</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="k">return</span> <span class="k">function</span><span class="p">()</span> <span class="c1">--返回迭代函数</span>
+    <span class="kd">local</span> <span class="n">ret</span> <span class="o">=</span> <span class="n">array</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">ret</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="nf">foreach</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">element</span> <span class="k">in</span> <span class="n">enum</span><span class="p">(</span><span class="n">array</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">action</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">foreach</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="nb">print</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>1
+2
+3
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>迭代</p>
+
+    <p>迭代是<code class="highlighter-rouge">for</code>语句的一种特殊形式。<code class="highlighter-rouge">for</code>语句可以驱动迭代函数对一个给定集合进行遍历。正式、完备的语法说明较复杂，请参考Lua手册。</p>
+  </li>
+  <li>
+    <p>实现</p>
+
+    <p>如前面代码所示：<code class="highlighter-rouge">enum</code>函数返回一个匿名的迭代函数，<code class="highlighter-rouge">for</code>语句每次调用该迭代函数都得到一个值（通过<code class="highlighter-rouge">element</code>变量引用），若该值为<code class="highlighter-rouge">nil</code>，则<code class="highlighter-rouge">for</code>循环结束。</p>
+  </li>
+</ul>
+
+<h3 id="协作线程coroutine">协作线程（coroutine）</h3>
+
+<div class="language-lua highlighter-rouge"><pre class="highlight"><code><span class="k">function</span> <span class="nf">producer</span><span class="p">()</span>
+  <span class="k">return</span> <span class="nb">coroutine.create</span><span class="p">(</span>
+    <span class="k">function</span> <span class="p">(</span><span class="n">salt</span><span class="p">)</span>
+      <span class="kd">local</span> <span class="n">t</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span> <span class="p">}</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="o">#</span><span class="n">t</span> <span class="k">do</span>
+        <span class="n">salt</span> <span class="o">=</span> <span class="nb">coroutine.yield</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">salt</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="p">)</span>
+<span class="k">end</span>
+
+<span class="k">function</span> <span class="nf">consumer</span><span class="p">(</span><span class="n">prod</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">salt</span> <span class="o">=</span> <span class="mi">10</span>
+  <span class="k">while</span> <span class="kc">true</span> <span class="k">do</span>
+    <span class="kd">local</span> <span class="n">running</span><span class="p">,</span> <span class="n">product</span> <span class="o">=</span> <span class="nb">coroutine.resume</span><span class="p">(</span><span class="n">prod</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+    <span class="n">salt</span> <span class="o">=</span> <span class="n">salt</span> <span class="o">*</span> <span class="n">salt</span>
+    <span class="k">if</span> <span class="n">running</span> <span class="k">then</span>
+      <span class="nb">print</span><span class="p">(</span><span class="n">product</span> <span class="ow">or</span> <span class="s2">"END!"</span><span class="p">)</span>
+    <span class="k">else</span>
+      <span class="k">break</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">consumer</span><span class="p">(</span><span class="n">producer</span><span class="p">())</span>
+</code></pre>
+</div>
+
+<p>输出：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>11
+102
+10003
+END!
+</code></pre>
+</div>
+
+<p>要点：</p>
+<ul>
+  <li>
+    <p>协作线程</p>
+
+    <p>Lua的线程对象。不同于一般操作系统所采取的抢占式线程，Lua采取了一种合作式线程。也就是说，只有在一个线程主动放弃处理器时，另一个线程才能执行。</p>
+  </li>
+  <li>
+    <p>创建协作线程</p>
+
+    <p>通过<code class="highlighter-rouge">coroutine.create</code>可以创建一个协作线程，该函数接收一个函数类型的参数作为线程的执行体，返回一个线程对象。</p>
+  </li>
+  <li>
+    <p>启动或继续线程</p>
+
+    <p>通过<code class="highlighter-rouge">coroutine.resume</code>可以启动一个线程或者继续一个挂起的线程。该函数接收一个线程对象以及其他需要传递给该线程的参数。线程可以通过线程函数的参数或者<code class="highlighter-rouge">coroutine.yield</code>调用的返回值来获取这些参数。当线程初次执行时，<code class="highlighter-rouge">resume</code>传递的参数通过线程函数的参数传递给线程，线程从线程函数开始执行；当线程由挂起转为执行时，<code class="highlighter-rouge">resume</code>传递的参数以<code class="highlighter-rouge">yield</code>调用返回值的形式传递给线程，线程从<code class="highlighter-rouge">yield</code>调用后继续执行。</p>
+  </li>
+  <li>
+    <p>线程放弃调度</p>
+
+    <p>线程调用<code class="highlighter-rouge">coroutine.yield</code>暂停自己的执行，并把执行权返回给启动/继续它的线程；线程还可利用<code class="highlighter-rouge">yield</code>返回一些值给后者，这些值以<code class="highlighter-rouge">resume</code>调用的返回值的形式返回。</p>
+  </li>
+</ul>
+
+<h2 id="附录-常用的lua参考资料">附录 常用的Lua参考资料</h2>
+<ul>
+  <li><a href="http://www.lua.org/manual/5.1/">Lua参考手册</a> - 最正式、权威的Lua文档</li>
+  <li><a href="http://www.lua.org/pil/">Lua编程</a> - 在线版，同样具权威性的Lua教科书</li>
+  <li><a href="http://www.lua.org/docs.html">Lua正式网站的文档页面</a> - 包含很多有价值的文档资料链接</li>
+  <li><a href="http://lua-users.org/wiki/">Lua维基</a> - 最全面的Lua维基百科</li>
+  <li><a href="http://luaforge.net/">LuaForge</a> - 最丰富的Lua开源代码基地</li>
+</ul>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:1">
+      <p>具体实现由Lua的编译参数确定，比如可以用int类型替代，则数值不支持浮点运算。double是Lua5.1标准编译参数所采用的类型。&nbsp;<a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </div>
+
+  
+<div id="disqus_thread"></div>
+<script>
+var disqus_config = function () {
+  this.page.url = "http://huiming.io/2011/05/01/lua-quick-start.html";
+  this.page.identifier = "/2011/05/01/lua-quick-start";
+};
+(function() {
+  var d = document, s = d.createElement('script');
+  s.src = '//huiming-io.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+</article>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">
+      晦鸣
+      <a href="#" class="back-to-top">返回顶部</a>
+    </h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            
+              Robert Zhang
+            
+            </li>
+          <li><a href="mailto:louirobert@gmail.com">louirobert@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/coin8086" target="_blank"><span class="icon icon--github"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">coin8086</span></a>
+
+          </li>
+          
+
+          
+          <li>
+            <a href="http://weibo.com/acadamus" target="_blank"><span class="icon icon--weibo"><svg version="1.2" baseProfile="tiny"
+	xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+  width="16px" height="16px" viewBox="0 0 512 412" xml:space="preserve">
+<path fill="#828282" d="M216.057,378.813C133.321,386.966,61.9,349.579,56.52,295.251c-5.37-54.314,57.369-104.972,140.095-113.148
+	c82.747-8.19,154.175,29.217,159.542,83.516C361.52,319.958,298.803,370.633,216.057,378.813 M381.553,198.479
+	c-7.043-2.101-11.869-3.543-8.182-12.784c7.979-20.082,8.803-37.406,0.154-49.762c-16.225-23.174-60.617-21.928-111.504-0.623
+	c0-0.026-15.981,6.995-11.897-5.685c7.828-25.163,6.65-46.234-5.531-58.403c-27.603-27.626-101.015,1.045-163.975,63.979
+	C33.475,182.35,6.101,232.319,6.101,275.532c0,82.652,105.988,132.897,209.681,132.897c135.925,0,226.347-78.977,226.347-141.672
+	C442.129,228.873,410.221,207.379,381.553,198.479"/>
+<path fill="#828282" d="M471.813,47.23C438.99,10.84,390.572-3.026,345.877,6.474h-0.018c-10.326,2.206-16.932,12.382-14.707,22.708
+	c2.195,10.325,12.367,16.932,22.709,14.72c31.791-6.75,66.191,3.135,89.543,28.976c23.309,25.848,29.641,61.111,19.658,92.015v0.011
+	c-3.256,10.075,2.252,20.846,12.328,24.097c10.051,3.254,20.84-2.252,24.092-12.291c0-0.014,0-0.051,0.008-0.073
+	C513.502,133.144,504.656,83.585,471.813,47.23"/>
+<path fill="#828282" d="M421.4,92.722c-15.975-17.717-39.559-24.452-61.34-19.826c-8.9,1.896-14.574,10.657-12.666,19.569
+	c1.908,8.864,10.658,14.569,19.537,12.635v0.018c10.641-2.257,22.184,1.024,30.004,9.668c7.814,8.673,9.916,20.483,6.553,30.844
+	h0.018c-2.789,8.642,1.939,17.936,10.598,20.746c8.668,2.772,17.947-1.952,20.736-10.61c6.846-21.195,2.57-45.326-13.439-63.047"/>
+<path d="M220.623,280.424c-2.895,4.957-9.293,7.332-14.3,5.269c-4.933-2.023-6.478-7.56-3.678-12.427
+	c2.885-4.835,9.037-7.197,13.95-5.25C221.593,269.847,223.385,275.445,220.623,280.424 M194.258,314.268
+	c-8,12.765-25.137,18.359-38.05,12.469c-12.719-5.789-16.47-20.626-8.466-33.073c7.904-12.396,24.463-17.926,37.282-12.55
+	C197.979,286.632,202.124,301.367,194.258,314.268 M224.33,223.904c-39.375-10.249-83.879,9.377-100.979,44.072
+	c-17.416,35.382-0.575,74.66,39.198,87.502c41.211,13.285,89.773-7.078,106.664-45.266
+	C285.871,272.874,265.074,234.435,224.33,223.904"/>
+</svg>
+
+</span><span class="username">acadamus</span></a>
+
+          </li>
+          
+
+          
+          <li>
+            <a href="https://www.zhihu.com/people/robert-zh" target="_blank"><span class="icon icon-zhihu"><svg viewBox="0 0 200 91" height="14px">
+<g>
+<path d="M53.29 80.035l7.32.002 2.41 8.24 13.128-8.24h15.477v-67.98H53.29v67.978zm7.79-60.598h22.756v53.22h-8.73l-8.718 5.473-1.587-5.46-3.72-.012v-53.22zM46.818 43.162h-16.35c.545-8.467.687-16.12.687-22.955h15.987s.615-7.05-2.68-6.97H16.807c1.09-4.1 2.46-8.332 4.1-12.708 0 0-7.523 0-10.085 6.74-1.06 2.78-4.128 13.48-9.592 24.41 1.84-.2 7.927-.37 11.512-6.94.66-1.84.785-2.08 1.605-4.54h9.02c0 3.28-.374 20.9-.526 22.95H6.51c-3.67 0-4.863 7.38-4.863 7.38H22.14C20.765 66.11 13.385 79.24 0 89.62c6.403 1.828 12.784-.29 15.937-3.094 0 0 7.182-6.53 11.12-21.64L43.92 85.18s2.473-8.402-.388-12.496c-2.37-2.788-8.768-10.33-11.496-13.064l-4.57 3.627c1.363-4.368 2.183-8.61 2.46-12.71H49.19s-.027-7.38-2.372-7.38zm128.752-.502c6.51-8.013 14.054-18.302 14.054-18.302s-5.827-4.625-8.556-1.27c-1.874 2.548-11.51 15.063-11.51 15.063l6.012 4.51zm-46.903-18.462c-2.814-2.577-8.096.667-8.096.667s12.35 17.2 12.85 17.953l6.08-4.29s-8.02-11.752-10.83-14.33zM199.99 46.5c-6.18 0-40.908.292-40.953.292v-31.56c1.503 0 3.882-.124 7.14-.376 12.773-.753 21.914-1.25 27.427-1.504 0 0 3.817-8.496-.185-10.45-.96-.37-7.24 1.43-7.24 1.43s-51.63 5.153-72.61 5.64c.5 2.756 2.38 5.336 4.93 6.11 4.16 1.087 7.09.53 15.36.277 7.76-.5 13.65-.76 17.66-.76v31.19h-41.71s.88 6.97 7.97 7.14h33.73v22.16c0 4.364-3.498 6.87-7.65 6.6-4.4.034-8.15-.36-13.027-.566.623 1.24 1.977 4.496 6.035 6.824 3.087 1.502 5.054 2.053 8.13 2.053 9.237 0 14.27-5.4 14.027-14.16V53.93h38.235c3.026 0 2.72-7.432 2.72-7.432z" fill-rule="evenodd"></path>
+</g>
+</svg>
+</span><span class="username">robert-zh</span></a>
+
+          </li>
+          
+
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>风雨如晦，鸡鸣不已，既见君子，云胡不喜
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+    <script src="/assets/external_link.js"></script>
+
+
+  </body>
+
+</html>

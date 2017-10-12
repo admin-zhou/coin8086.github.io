@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Ruby Rack及其应用（上）</title>
+  <meta name="description" content="你可能听说过Rails、Sinatra这些Ruby Web框架，也可能尝试过其中一、两个，但如果你还不了解Rack甚至根本没听说过它，那么你的Ruby Web开发还停留在表面：Ruby Rack是前面这些Ruby Web框架的基础，Rails和Sinatra都建立在它之上；不了解Rack的原理就无法真正理解你的R...">
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="/2016/11/10/ruby-rack.html">
+  <link rel="alternate" type="application/rss+xml" title="晦鸣" href="/feed.xml">
+
+  
+
+  
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-85747376-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+  
+
+  
+</head>
+
+
+  <body>
+
+    <header class="site-header" role="banner">
+
+  <div class="wrapper">
+    <a class="site-title" href="/">晦鸣</a>
+
+    <nav class="site-nav">
+      <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+      <label for="nav-trigger">
+        <span class="menu-icon">
+          <svg viewBox="0 0 18 15" width="18px" height="15px">
+            <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+            <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+            <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+          </svg>
+        </span>
+      </label>
+
+      <div class="trigger">
+        <a class="page-link" href="/about.html">典故</a>
+        <a class="page-link" href="/works.html">拙著</a>
+        <a class="page-link" href="/tags.html">标签</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Ruby Rack及其应用（上）</h1>
+
+    <p>
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/ruby.html">ruby</a></span>
+  </span>
+
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/rack.html">rack</a></span>
+  </span>
+
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/middleware.html">middleware</a></span>
+  </span>
+
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/rails.html">rails</a></span>
+  </span>
+
+  <span class="post-tag">
+    <span class="post-tag-inner"><a href="/tags/sinatra.html">sinatra</a></span>
+  </span>
+
+
+</p>
+
+    <p class="post-meta">
+      <time datetime="2016-11-10T11:45:14+00:00" itemprop="datePublished">2016-11-10</time>
+    </p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <ul id="markdown-toc">
+  <li><a href="#前言" id="markdown-toc-前言">前言</a></li>
+  <li><a href="#什么是ruby-rack" id="markdown-toc-什么是ruby-rack">什么是Ruby Rack</a></li>
+  <li><a href="#rack-middleware" id="markdown-toc-rack-middleware">Rack Middleware</a></li>
+  <li><a href="#rackup和rackbuilder" id="markdown-toc-rackup和rackbuilder">rackup和Rack::Builder</a></li>
+  <li><a href="#rails-sinatra-on-rack" id="markdown-toc-rails-sinatra-on-rack">Rails, Sinatra on Rack</a></li>
+  <li><a href="#rack-env" id="markdown-toc-rack-env">Rack env</a></li>
+</ul>
+
+<h2 id="前言">前言</h2>
+<p>你可能听说过Rails、Sinatra这些Ruby Web框架，也可能尝试过其中一、两个，但如果你还不了解Rack甚至根本没听说过它，那么你的Ruby Web开发还停留在表面：Ruby Rack是前面这些Ruby Web框架的基础，Rails和Sinatra都建立在它之上；不了解Rack的原理就无法真正理解你的Ruby Web应用的架构与工作机制、对一些复杂的问题也无能无力。任何一个正经的Ruby Web开发者都应该了解、掌握Rack。</p>
+
+<h2 id="什么是ruby-rack">什么是Ruby Rack</h2>
+<p>Ruby Rack是一个接口，用于Ruby Web应用与应用服务器之间的交互，如图所示：</p>
+
+<p><img src="/images/rack.png" alt="Ruby Rack" /></p>
+
+<p>最左边的User Agent就是浏览器等客户端，它发起HTTP请求；中间的Rack Server是应用服务器<sup id="fnref:2"><a href="#fn:2" class="footnote">1</a></sup>，它响应HTTP请求，并调用我们的Rack应用；最右边是我们的应用程序——它可能是一个Rails或者Sinatra应用。Rack服务器和Rack应用程序之间通过Rack接口交互。</p>
+
+<p>那么Rack接口是怎样的？就像这样：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># hello.rb - v0</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="nb">proc</span> <span class="k">do</span> <span class="o">|</span><span class="n">env</span><span class="o">|</span>
+  <span class="p">[</span><span class="s1">'200'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'Content-Type'</span> <span class="o">=&gt;</span> <span class="s1">'text/html'</span><span class="p">},</span> <span class="p">[</span><span class="s1">'Hello, Rack!'</span><span class="p">]]</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>这是一个最小的可以工作的Rack应用程序，它揭示了Rack接口：</p>
+
+<ul>
+  <li>一个响应<code class="highlighter-rouge">call</code>方法的对象（任何类型的对象都可以，上面只是以proc为例）</li>
+  <li>接受一个Hash类型的环境变量作为输入参数（它包含了全部的HTTP请求信息）</li>
+  <li>返回一个包含三个元素的数组，依次是：
+    <ol>
+      <li>HTTP应答代码（status code）</li>
+      <li>一个Hash类型的对象，包含HTTP应答头部信息（header）</li>
+      <li>一个响应<code class="highlighter-rouge">each</code>方法的对象，其结果将作为HTTP应答消息的主体（body）</li>
+    </ol>
+  </li>
+</ul>
+
+<p>很简单不是么？（难的我都放在后面了，^_-）</p>
+
+<p>只要再加两行代码，这个迷你的Web服务就能正式运行起来：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># hello.rb - v1</span>
+
+<span class="nb">require</span> <span class="s1">'rack'</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="nb">proc</span> <span class="k">do</span> <span class="o">|</span><span class="n">env</span><span class="o">|</span>
+  <span class="p">[</span><span class="s1">'200'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'Content-Type'</span> <span class="o">=&gt;</span> <span class="s1">'text/html'</span><span class="p">},</span> <span class="p">[</span><span class="s1">'Hello, Rack!'</span><span class="p">]]</span>
+<span class="k">end</span>
+
+<span class="no">Rack</span><span class="o">::</span><span class="no">Handler</span><span class="o">::</span><span class="no">WEBrick</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="ss">:Port</span> <span class="o">=&gt;</span> <span class="mi">8090</span><span class="p">,</span> <span class="ss">:Host</span> <span class="o">=&gt;</span> <span class="s1">'0.0.0.0'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>在最后一行，我们用Webrick<sup id="fnref:3"><a href="#fn:3" class="footnote">2</a></sup>这个Rack服务器来run我们的Rack应用。</p>
+
+<p>要运行上面的代码，先安装Gem rack（如过你安装过Rails或者Sinatra那么它已经作为依赖被安装过了）：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>gem install rack
+</code></pre>
+</div>
+
+<p>假设以上代码保存在文件<code class="highlighter-rouge">hello.rb</code>中，执行</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>ruby hello.rb
+</code></pre>
+</div>
+
+<p>就把我们的迷你服务器启动了。在浏览器中访问<code class="highlighter-rouge">http://localhost:8090</code>，快试试！</p>
+
+<h2 id="rack-middleware">Rack Middleware</h2>
+<p>Rack不是那么简单：现在让我们了解一下强大的Rack中间件（middleware）。</p>
+
+<p>以下是一个中间件的例子<sup id="fnref:4"><a href="#fn:4" class="footnote">3</a></sup>：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># timing.rb - v1</span>
+
+<span class="k">class</span> <span class="nc">Timing</span>
+  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+    <span class="vi">@app</span> <span class="o">=</span> <span class="n">app</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="no">Time</span><span class="p">.</span><span class="nf">now</span>
+    <span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="vi">@app</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="no">Time</span><span class="p">.</span><span class="nf">now</span> <span class="o">-</span> <span class="n">ts</span>
+    <span class="nb">puts</span> <span class="s2">"Timing: </span><span class="si">#{</span><span class="n">env</span><span class="p">[</span><span class="s1">'REQUEST_METHOD'</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">env</span><span class="p">[</span><span class="s1">'REQUEST_URI'</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">elapsed_time</span><span class="p">.</span><span class="nf">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">body</span><span class="p">]</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>我们可以这么使用它<sup id="fnref:5"><a href="#fn:5" class="footnote">4</a></sup>：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># hello.rb - v2</span>
+
+<span class="nb">require</span> <span class="s1">'rack'</span>
+<span class="nb">require</span> <span class="s1">'./timing.rb'</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="nb">proc</span> <span class="k">do</span> <span class="o">|</span><span class="n">env</span><span class="o">|</span>
+  <span class="p">[</span><span class="s1">'200'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'Content-Type'</span> <span class="o">=&gt;</span> <span class="s1">'text/html'</span><span class="p">},</span> <span class="p">[</span><span class="s1">'Hello, Rack!'</span><span class="p">]]</span>
+<span class="k">end</span>
+
+<span class="no">Rack</span><span class="o">::</span><span class="no">Handler</span><span class="o">::</span><span class="no">WEBrick</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="no">Timing</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">app</span><span class="p">),</span> <span class="ss">:Port</span> <span class="o">=&gt;</span> <span class="mi">8090</span><span class="p">,</span> <span class="ss">:Host</span> <span class="o">=&gt;</span> <span class="s1">'0.0.0.0'</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>快试试！看看现在我们的Rack应用有什么变化。</p>
+
+<p>现在我来解释一下上面的程序。</p>
+
+<p>Rack中间件就是一个类，如上面的<code class="highlighter-rouge">Timing</code>，其对象响应一个<code class="highlighter-rouge">call</code>方法，这个方法的输入、输出规格与一般Rack应用一样。因此<code class="highlighter-rouge">Timing.new(app)</code>可以作为一个Rack应用直接传递给<code class="highlighter-rouge">Rack::Handler::WEBrick.run</code>。实际上，中间件可以这样一层套一层地层层嵌套下去，最后仍得出一个可以call的Rack应用。</p>
+
+<p>Rack中间件可以实现非常强大的功能。在上面的例子中，我们的Timing中间件为每一次调用计时，并把结果打印出来。这相当于一个profiler。实际上中间件能做的事情更多：它可以检查内嵌应用程序<code class="highlighter-rouge">@app</code>的输入、输出，还可以修改它们。因此它还可以用于鉴权（authentication/authorization）、日志，或者给内嵌应用提供一些额外的功能，如Session等等。稍后我们会看到两个实际的例子。</p>
+
+<h2 id="rackup和rackbuilder">rackup和Rack::Builder</h2>
+<p>rackup和Rack::Builder都是Gem rack提供的工具，方便我们使用、构造Rack应用。</p>
+
+<p>仍以前面的hello Rack和Timing中间件为例，实际上，我们一般这样定义我们的Rack应用：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># config.ru</span>
+
+<span class="nb">require</span> <span class="s1">'./hello.rb'</span>
+<span class="nb">require</span> <span class="s1">'./timing.rb'</span>
+
+<span class="n">use</span> <span class="no">Timing</span>
+<span class="n">run</span> <span class="no">Hello</span>
+</code></pre>
+</div>
+
+<p>以上代码保存在一个名为<code class="highlighter-rouge">config.ru</code>的文件中——它是rackup工具的缺省配置文件。</p>
+
+<p>其中hello.rb的内容是：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># hello.rb - v3</span>
+
+<span class="k">class</span> <span class="nc">Hello</span>
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="p">[</span><span class="s1">'200'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'Content-Type'</span> <span class="o">=&gt;</span> <span class="s1">'text/html'</span><span class="p">},</span> <span class="p">[</span><span class="s1">'Hello, Rack!'</span><span class="p">]]</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>这里我们定义了一个类<code class="highlighter-rouge">Hello</code>，它有一个<code class="highlighter-rouge">call</code>方法（回忆一下Rack的定义：任何响应<code class="highlighter-rouge">call</code>方法的对象）。</p>
+
+<p>我们不需要再编写初始化Rack中间件和启动Rack服务器的代码——rackup工具会为我们完成。</p>
+
+<p>一切就绪以后，在命令行执行（要在包含config.ru的目录下）：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>rackup
+</code></pre>
+</div>
+
+<p>啊哈，我们的迷你服务器又启动了！</p>
+
+<p>rackup默认使用Webrick服务器，你也可以通过参数指定其他服务器。了解更多参数选项：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>rackup -h
+</code></pre>
+</div>
+
+<p>如果你想知道rackup是如何构造Rack应用、配置中间件的，你需要了解Rack::Builder（Gem rack安装目录下的lib/rack/builder.rb）。具体代码这里就不做分析了。下面再举几个例子说明一下config.ru如何配置Rack应用和中间件。</p>
+
+<p>如果你要使用多个中间件，可以：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># config.ru - multi-middlewares</span>
+
+<span class="nb">require</span> <span class="s1">'./app.rb'</span>
+<span class="nb">require</span> <span class="s1">'./middleware1.rb'</span>
+<span class="nb">require</span> <span class="s1">'./middleware2.rb'</span>
+<span class="nb">require</span> <span class="s1">'./middleware3.rb'</span>
+
+<span class="n">use</span> <span class="no">Middleware1</span>
+<span class="n">use</span> <span class="no">Middleware2</span>
+<span class="n">use</span> <span class="no">Middleware3</span>
+<span class="n">run</span> <span class="no">App</span>
+</code></pre>
+</div>
+
+<p>Rack::Builder将依次应用这些中间件到<code class="highlighter-rouge">App</code>上，得出一个最终的Rack应用，效果如同以下代码：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="n">rack_app</span> <span class="o">=</span> <span class="no">Middleware1</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">Middleware2</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">Middleware3</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">App</span><span class="p">)))</span>
+</code></pre>
+</div>
+
+<p>你还可以在config.ru中配置路由，如：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># config.ru - routes</span>
+
+<span class="nb">require</span> <span class="s1">'./main.rb'</span>
+<span class="nb">require</span> <span class="s1">'./admin.rb'</span>
+<span class="nb">require</span> <span class="s1">'./m1.rb'</span>
+<span class="nb">require</span> <span class="s1">'./m2.rb'</span>
+
+<span class="n">map</span> <span class="s1">'/'</span> <span class="k">do</span>
+  <span class="n">use</span> <span class="n">m1</span>
+  <span class="n">run</span> <span class="no">Main</span>
+<span class="k">end</span>
+
+<span class="n">map</span> <span class="s1">'/admin'</span> <span class="k">do</span>
+  <span class="n">use</span> <span class="n">m2</span>
+  <span class="n">run</span> <span class="no">Admin</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>这样所有以<code class="highlighter-rouge">/admin/</code>开头的请求都会交由<code class="highlighter-rouge">Admin</code>处理，其余则由<code class="highlighter-rouge">Main</code>处理。这种配置实际上开启了一种“Rack组合”模式——由几个不同的Rack应用组成一个新的Rack应用。比如说：把一个Rails应用和一个Sinatra应用（它们都是标准的Rack应用）组合成一个新的Rack应用——脑洞很大，但完全可行！</p>
+
+<p>另外，Rack中间件是可以接受参数的——甚至可以带有code block，比如：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># config.ru</span>
+
+<span class="nb">require</span> <span class="s1">'./hello.rb'</span>
+<span class="nb">require</span> <span class="s1">'./timing.rb'</span>
+
+<span class="n">use</span> <span class="no">Timing</span><span class="p">,</span> <span class="ss">:pid</span> <span class="o">=&gt;</span> <span class="kp">true</span><span class="p">,</span> <span class="p">{</span> <span class="nb">puts</span> <span class="s2">"Timing is being initialized!"</span> <span class="p">}</span>
+<span class="n">run</span> <span class="no">Hello</span>
+</code></pre>
+</div>
+
+<p>这里的timing.rb内容如下：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="c1"># timing.rb - v2</span>
+
+<span class="k">class</span> <span class="nc">Timing</span>
+  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">&amp;</span><span class="n">b</span><span class="p">)</span>
+    <span class="vi">@app</span> <span class="o">=</span> <span class="n">app</span>
+    <span class="vi">@pid</span> <span class="o">=</span> <span class="n">opts</span><span class="p">[</span><span class="ss">:pid</span><span class="p">]</span>
+    <span class="k">yield</span> <span class="k">if</span> <span class="nb">block_given?</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="no">Time</span><span class="p">.</span><span class="nf">now</span>
+    <span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="vi">@app</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="no">Time</span><span class="p">.</span><span class="nf">now</span> <span class="o">-</span> <span class="n">ts</span>
+    <span class="nb">puts</span> <span class="s2">"Timing: </span><span class="si">#{</span><span class="no">Process</span><span class="p">.</span><span class="nf">pid</span> <span class="k">if</span> <span class="vi">@pid</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">env</span><span class="p">[</span><span class="s1">'REQUEST_METHOD'</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">env</span><span class="p">[</span><span class="s1">'REQUEST_URI'</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">elapsed_time</span><span class="p">.</span><span class="nf">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">status</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">body</span><span class="p">]</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<h2 id="rails-sinatra-on-rack">Rails, Sinatra on Rack</h2>
+
+<p>Rails和Sinatra都是标准的Rack应用框架——你可能已经注意到了，它们的项目根目录下一般都有一个config.ru文件。你可能会想：我从没编辑过这个文件，大概也就没有使用过中间件吧？错了！Rails和Sinatra都可以在它们的应用程序内配置中间件，并且在缺省情况下已经为你配置了一大堆：</p>
+
+<p>在一个Rails项目的根目录下运行：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>bin/rails middleware
+</code></pre>
+</div>
+
+<p>看看Rails为你配置的中间件栈有多深<sup id="fnref:6"><a href="#fn:6" class="footnote">5</a></sup>：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>use Rack::Sendfile
+use ActionDispatch::Static
+use ActionDispatch::Executor
+use #&lt;ActiveSupport::Cache::Strategy::LocalCache::Middleware:0x000000029a0838&gt;
+use Rack::Runtime
+use Rack::MethodOverride
+use ActionDispatch::RequestId
+use Rails::Rack::Logger
+use ActionDispatch::ShowExceptions
+use ActionDispatch::DebugExceptions
+use ActionDispatch::RemoteIp
+use ActionDispatch::Reloader
+use ActionDispatch::Callbacks
+use ActiveRecord::Migration::CheckPending
+use ActiveRecord::ConnectionAdapters::ConnectionManagement
+use ActiveRecord::QueryCache
+use ActionDispatch::Cookies
+use ActionDispatch::Session::CookieStore
+use ActionDispatch::Flash
+use Rack::Head
+use Rack::ConditionalGet
+use Rack::ETag
+run Rails.application.routes
+</code></pre>
+</div>
+
+<p>相比而言Sinatra要轻便许多：它有条件地配置了4～7个中间件（针对版本v1.4.7），在lib/sinatra/base.rb中：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="k">def</span> <span class="nf">setup_default_middleware</span><span class="p">(</span><span class="n">builder</span><span class="p">)</span>
+  <span class="n">builder</span><span class="p">.</span><span class="nf">use</span> <span class="no">ExtendedRack</span>
+  <span class="n">builder</span><span class="p">.</span><span class="nf">use</span> <span class="no">ShowExceptions</span>       <span class="k">if</span> <span class="n">show_exceptions?</span>
+  <span class="n">builder</span><span class="p">.</span><span class="nf">use</span> <span class="no">Rack</span><span class="o">::</span><span class="no">MethodOverride</span> <span class="k">if</span> <span class="n">method_override?</span>
+  <span class="n">builder</span><span class="p">.</span><span class="nf">use</span> <span class="no">Rack</span><span class="o">::</span><span class="no">Head</span>
+  <span class="n">setup_logging</span>    <span class="n">builder</span>
+  <span class="n">setup_sessions</span>   <span class="n">builder</span>
+  <span class="n">setup_protection</span> <span class="n">builder</span>
+<span class="k">end</span>
+</code></pre>
+</div>
+
+<p>但是，不论这些Rack应用框架如何组织、定义自己的中间件栈，你都可以在config.ru中使用Rack::Builder所支持的标准语法来配置你的中间件——虽然一般情况下你不必这么做，但这样做有一个好处：你在config.ru中配置的中间件处于你的中间件栈顶部<sup id="fnref:7"><a href="#fn:7" class="footnote">6</a></sup>，也就是说，它最先响应服务器的请求、最后给出答案，因此具有最大的权威。</p>
+
+<h2 id="rack-env">Rack env</h2>
+<p>以为Rack就这么结束了？并没有！——我之前说过，Rack没那么简单。前面我们只提了一下<code class="highlighter-rouge">call</code>接受一个环境变量<code class="highlighter-rouge">env</code>作为输入，并提到它包含了全部的HTTP请求信息，但并没有仔细讲讲它。现在是时候了——它很重要！</p>
+
+<p>让我们检查一下env都包含些啥：</p>
+
+<div class="language-ruby highlighter-rouge"><pre class="highlight"><code><span class="nb">require</span> <span class="s1">'rack'</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="nb">proc</span> <span class="k">do</span> <span class="o">|</span><span class="n">env</span><span class="o">|</span>
+  <span class="n">env</span><span class="p">.</span><span class="nf">to_a</span><span class="p">.</span><span class="nf">sort_by</span> <span class="p">{</span><span class="o">|</span><span class="n">e</span><span class="o">|</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">}.</span><span class="nf">each</span> <span class="p">{</span><span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span> <span class="nb">puts</span> <span class="sx">%Q(</span><span class="si">#{</span><span class="n">k</span><span class="si">}</span><span class="sx">=</span><span class="si">#{</span><span class="n">v</span><span class="si">}</span><span class="sx">)</span> <span class="p">}</span>
+  <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">{},</span> <span class="p">[]]</span>
+<span class="k">end</span>
+
+<span class="no">Rack</span><span class="o">::</span><span class="no">Handler</span><span class="o">::</span><span class="no">WEBrick</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="ss">:Port</span> <span class="o">=&gt;</span> <span class="mi">8090</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<p>这个简单的Rack应用会把env的内容都打印出来。照前面的样子启动它，然后访问它，你就能看到：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>GATEWAY_INTERFACE=CGI/1.1
+HTTP_ACCEPT=*/*
+HTTP_HOST=localhost:8090
+HTTP_USER_AGENT=curl/7.35.0
+HTTP_VERSION=HTTP/1.1
+PATH_INFO=/
+QUERY_STRING=
+REMOTE_ADDR=127.0.0.1
+REMOTE_HOST=127.0.0.1
+REQUEST_METHOD=GET
+REQUEST_PATH=/
+REQUEST_URI=http://localhost:8090/
+SCRIPT_NAME=
+SERVER_NAME=localhost
+SERVER_PORT=8090
+SERVER_PROTOCOL=HTTP/1.1
+SERVER_SOFTWARE=WEBrick/1.3.1 (Ruby/2.3.0/2015-12-25)
+rack.errors=#&lt;IO:0x0000000220dad0&gt;
+rack.hijack=#&lt;Proc:0x000000024176c8@/home/user/.rvm/gems/ruby-2.3.0/gems/rack-1.6.4/lib/rack/handler/webrick.rb:76 (lambda)&gt;
+rack.hijack?=true
+rack.hijack_io=
+rack.input=#&lt;StringIO:0x000000024180a0&gt;
+rack.multiprocess=false
+rack.multithread=true
+rack.run_once=false
+rack.url_scheme=http
+rack.version=[1, 3]
+</code></pre>
+</div>
+
+<p>这是我从localhost上用curl访问的输出，你的也应该差不多。除了那些大写的CGI<sup id="fnref:8"><a href="#fn:8" class="footnote">7</a></sup>变量，还有一些rack.xxx变量，这些都是由Rack服务器设置并传递给Rack应用程序的。</p>
+
+<p>CGI变量大都可以顾名思义，前面的Timing中间件作为一个示例也用到了<code class="highlighter-rouge">REQUEST_METHOD</code>和<code class="highlighter-rouge">REQUEST_URI</code>，这里就不详细介绍了，感兴趣的读者可以参考脚注<sup id="fnref:8:1"><a href="#fn:8" class="footnote">7</a></sup>。下面对rack.xxx变量做一些介绍：</p>
+
+<ul>
+  <li><code class="highlighter-rouge">rack.input</code> 一个IO对象，可以读取raw HTTP request。</li>
+  <li><code class="highlighter-rouge">rack.errors</code> 一个IO对象，用于错误输出。一般地，Rack服务器会把它输出到服务器日志文件。它也是Rack::Logger和Rack::CommonLogger的输出对象。</li>
+  <li><code class="highlighter-rouge">rack.hijack</code>、<code class="highlighter-rouge">rack.hijack?</code>和<code class="highlighter-rouge">rack.hijack_io</code>可以实现websocket。</li>
+  <li><code class="highlighter-rouge">rack.multiprocess</code>和<code class="highlighter-rouge">rack.multithread</code>: 这两个对象指示了Rack应用的运行环境是否是多进程、多线程。这里需要着重说明一下：Rack服务器可以根据负载情况同时启用Rack应用的多个实例，既有可能通过多进程（每个进程一个实例），也有可能通过多线程（一个进程，多个线程，每线程一个实例），还可能把二者结合起来（多进程，同时每个进程内多线程实例）。服务器具体通过什么方式启动应用，每种服务器都不一样，你需要查看服务器的文档说明。比如Phusion Passeger可以使用多进程或者混合模式（在企业版中）；Unicorn多进程；Thin多线程（可配置）。一般来说使用多进程方式比较安全：如果要使用多线程，你不但要保证你的Rack应用是线程安全的，还要保证你用到的所有中间件都是线程安全的。</li>
+  <li><code class="highlighter-rouge">rack.run_once</code> 这个变量说明服务器是否只运行你的Rack应用实例一次就把它释放掉。这就是说服务器会对每个HTTP请求构造一个新的Rack应用实例（包括所有的中间件初始化工作）。一般来说只有CGI服务器会这样做<sup id="fnref:9"><a href="#fn:9" class="footnote">8</a></sup>（你肯定听说过CGI服务器效率不高吧？）。</li>
+  <li><code class="highlighter-rouge">rack.url_scheme</code> http或https</li>
+  <li><code class="highlighter-rouge">rack.version</code> Rack Spec的版本（不是Gem Rack的版本）。我一直还没告诉你：Rack不但是一个接口、一个Gem的名字，还是一个<a href="http://www.rubydoc.info/github/rack/rack/file/SPEC">规范</a>。</li>
+</ul>
+
+<p>一般而言你不必直接操作这些rack.xxx变量（也不应该这么做，除非你十分清楚这么做的后果，像作者这样^_-），但是你应该清楚它们的意义，这有助于你深刻理解Rack以及处理一些复杂问题。另外，Rack env不但可以用于从Rack服务器向Rack应用和中间件传递一些信息，还可以用于在Rack中间件之间或者中间件与应用之间传递消息。在本文的下半部我们将看到这是如何实现的，以及这样做的意义。</p>
+
+<p>Rack的介绍到此为止，本文下半部将介绍一些Rack技术的常见应用，包括Auth、Session和Log等中间件，了解它们是如何工作的。同时，欢迎你关注<a href="http://huiming.io">我的博客</a>和<a href="http://weibo.com/githubercn">这个微博</a>，获取更多技术资讯。</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn:2">
+      <p>常见的Rack应用服务器有Phusion Passenger，Unicorn，Thin，Puma和Webrick等等。&nbsp;<a href="#fnref:2" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:3">
+      <p>Webrick一般用于开发环境，你的生产环境应该使用Phusion Passenger或者Unicorn等高性能的Rack服务器。&nbsp;<a href="#fnref:3" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:4">
+      <p>我喜欢直接从代码开始，我也建议读者手工输入并运行全部的代码示例，并且反复强调一点：技术文章不要只去读，要做！&nbsp;<a href="#fnref:4" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:5">
+      <p>一般我们不这么用，后面的rackup一节会展示通常的用法，但二者的本质是一样的，只是表现形式不同。&nbsp;<a href="#fnref:5" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:6">
+      <p>更多关于Rails on Rack的信息可参考：<a href="http://guides.rubyonrails.org/rails_on_rack.html">Rails on Rack</a>&nbsp;<a href="#fnref:6" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:7">
+      <p>实际上Rack服务器也可以（而且并不少见）给Rack应用加上一些额外的中间件，用于输出DEBUG日志等一些工作。这些中间件在所有中间件栈的位置比config.ru中的还要“高”。&nbsp;<a href="#fnref:7" class="reversefootnote">&#8617;</a></p>
+    </li>
+    <li id="fn:8">
+      <p>CGI即通用网关接口（Common Gateway Interface），我在《Web全栈技术指南》的<a href="http://getfullstack.com/web_server/server_programming/cgi.html">Web服务器-&gt;编程语言与技术-&gt;CGI</a>一节做过介绍。&nbsp;<a href="#fnref:8" class="reversefootnote">&#8617;</a>&nbsp;<a href="#fnref:8:1" class="reversefootnote">&#8617;<sup>2</sup></a></p>
+    </li>
+    <li id="fn:9">
+      <p>细心的读者可能会问：Rack应用难道不是对每个请求构造一个新的实例么？比如一个从Sinatra::Base继承来的类，对每次请求都会生成新的实例，成员变量也都重新初始化了。其实并没有！以Sinatra为例，它只是每次从初始化好的、无状态的Rack应用对象dup一个实例，用完就释放，下次再dup一个新的。具体你要看看Sinatra或者Rails的代码是如何做到的。&nbsp;<a href="#fnref:9" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </div>
+
+  
+<div id="disqus_thread"></div>
+<script>
+var disqus_config = function () {
+  this.page.url = "http://huiming.io/2016/11/10/ruby-rack.html";
+  this.page.identifier = "/2016/11/10/ruby-rack";
+};
+(function() {
+  var d = document, s = d.createElement('script');
+  s.src = '//huiming-io.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+</article>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">
+      晦鸣
+      <a href="#" class="back-to-top">返回顶部</a>
+    </h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            
+              Robert Zhang
+            
+            </li>
+          <li><a href="mailto:louirobert@gmail.com">louirobert@gmail.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="https://github.com/coin8086" target="_blank"><span class="icon icon--github"><svg viewBox="0 0 16 16" width="16px" height="16px"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">coin8086</span></a>
+
+          </li>
+          
+
+          
+          <li>
+            <a href="http://weibo.com/acadamus" target="_blank"><span class="icon icon--weibo"><svg version="1.2" baseProfile="tiny"
+	xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+  width="16px" height="16px" viewBox="0 0 512 412" xml:space="preserve">
+<path fill="#828282" d="M216.057,378.813C133.321,386.966,61.9,349.579,56.52,295.251c-5.37-54.314,57.369-104.972,140.095-113.148
+	c82.747-8.19,154.175,29.217,159.542,83.516C361.52,319.958,298.803,370.633,216.057,378.813 M381.553,198.479
+	c-7.043-2.101-11.869-3.543-8.182-12.784c7.979-20.082,8.803-37.406,0.154-49.762c-16.225-23.174-60.617-21.928-111.504-0.623
+	c0-0.026-15.981,6.995-11.897-5.685c7.828-25.163,6.65-46.234-5.531-58.403c-27.603-27.626-101.015,1.045-163.975,63.979
+	C33.475,182.35,6.101,232.319,6.101,275.532c0,82.652,105.988,132.897,209.681,132.897c135.925,0,226.347-78.977,226.347-141.672
+	C442.129,228.873,410.221,207.379,381.553,198.479"/>
+<path fill="#828282" d="M471.813,47.23C438.99,10.84,390.572-3.026,345.877,6.474h-0.018c-10.326,2.206-16.932,12.382-14.707,22.708
+	c2.195,10.325,12.367,16.932,22.709,14.72c31.791-6.75,66.191,3.135,89.543,28.976c23.309,25.848,29.641,61.111,19.658,92.015v0.011
+	c-3.256,10.075,2.252,20.846,12.328,24.097c10.051,3.254,20.84-2.252,24.092-12.291c0-0.014,0-0.051,0.008-0.073
+	C513.502,133.144,504.656,83.585,471.813,47.23"/>
+<path fill="#828282" d="M421.4,92.722c-15.975-17.717-39.559-24.452-61.34-19.826c-8.9,1.896-14.574,10.657-12.666,19.569
+	c1.908,8.864,10.658,14.569,19.537,12.635v0.018c10.641-2.257,22.184,1.024,30.004,9.668c7.814,8.673,9.916,20.483,6.553,30.844
+	h0.018c-2.789,8.642,1.939,17.936,10.598,20.746c8.668,2.772,17.947-1.952,20.736-10.61c6.846-21.195,2.57-45.326-13.439-63.047"/>
+<path d="M220.623,280.424c-2.895,4.957-9.293,7.332-14.3,5.269c-4.933-2.023-6.478-7.56-3.678-12.427
+	c2.885-4.835,9.037-7.197,13.95-5.25C221.593,269.847,223.385,275.445,220.623,280.424 M194.258,314.268
+	c-8,12.765-25.137,18.359-38.05,12.469c-12.719-5.789-16.47-20.626-8.466-33.073c7.904-12.396,24.463-17.926,37.282-12.55
+	C197.979,286.632,202.124,301.367,194.258,314.268 M224.33,223.904c-39.375-10.249-83.879,9.377-100.979,44.072
+	c-17.416,35.382-0.575,74.66,39.198,87.502c41.211,13.285,89.773-7.078,106.664-45.266
+	C285.871,272.874,265.074,234.435,224.33,223.904"/>
+</svg>
+
+</span><span class="username">acadamus</span></a>
+
+          </li>
+          
+
+          
+          <li>
+            <a href="https://www.zhihu.com/people/robert-zh" target="_blank"><span class="icon icon-zhihu"><svg viewBox="0 0 200 91" height="14px">
+<g>
+<path d="M53.29 80.035l7.32.002 2.41 8.24 13.128-8.24h15.477v-67.98H53.29v67.978zm7.79-60.598h22.756v53.22h-8.73l-8.718 5.473-1.587-5.46-3.72-.012v-53.22zM46.818 43.162h-16.35c.545-8.467.687-16.12.687-22.955h15.987s.615-7.05-2.68-6.97H16.807c1.09-4.1 2.46-8.332 4.1-12.708 0 0-7.523 0-10.085 6.74-1.06 2.78-4.128 13.48-9.592 24.41 1.84-.2 7.927-.37 11.512-6.94.66-1.84.785-2.08 1.605-4.54h9.02c0 3.28-.374 20.9-.526 22.95H6.51c-3.67 0-4.863 7.38-4.863 7.38H22.14C20.765 66.11 13.385 79.24 0 89.62c6.403 1.828 12.784-.29 15.937-3.094 0 0 7.182-6.53 11.12-21.64L43.92 85.18s2.473-8.402-.388-12.496c-2.37-2.788-8.768-10.33-11.496-13.064l-4.57 3.627c1.363-4.368 2.183-8.61 2.46-12.71H49.19s-.027-7.38-2.372-7.38zm128.752-.502c6.51-8.013 14.054-18.302 14.054-18.302s-5.827-4.625-8.556-1.27c-1.874 2.548-11.51 15.063-11.51 15.063l6.012 4.51zm-46.903-18.462c-2.814-2.577-8.096.667-8.096.667s12.35 17.2 12.85 17.953l6.08-4.29s-8.02-11.752-10.83-14.33zM199.99 46.5c-6.18 0-40.908.292-40.953.292v-31.56c1.503 0 3.882-.124 7.14-.376 12.773-.753 21.914-1.25 27.427-1.504 0 0 3.817-8.496-.185-10.45-.96-.37-7.24 1.43-7.24 1.43s-51.63 5.153-72.61 5.64c.5 2.756 2.38 5.336 4.93 6.11 4.16 1.087 7.09.53 15.36.277 7.76-.5 13.65-.76 17.66-.76v31.19h-41.71s.88 6.97 7.97 7.14h33.73v22.16c0 4.364-3.498 6.87-7.65 6.6-4.4.034-8.15-.36-13.027-.566.623 1.24 1.977 4.496 6.035 6.824 3.087 1.502 5.054 2.053 8.13 2.053 9.237 0 14.27-5.4 14.027-14.16V53.93h38.235c3.026 0 2.72-7.432 2.72-7.432z" fill-rule="evenodd"></path>
+</g>
+</svg>
+</span><span class="username">robert-zh</span></a>
+
+          </li>
+          
+
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>风雨如晦，鸡鸣不已，既见君子，云胡不喜
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+    <script src="/assets/external_link.js"></script>
+
+
+  </body>
+
+</html>
